@@ -16,6 +16,7 @@
 </head>
 <body class="participante">
   <div class="ceu" aria-hidden="true"></div>
+  <div class="explosao" id="explosao" aria-hidden="true"></div>
 
   <main class="palco">
     <!-- CENA 1: aguardando -->
@@ -23,7 +24,7 @@
       <div class="abertura">
         <div class="etiqueta">Sorteio ao vivo</div>
         <h1 id="title">Você está conectado!</h1>
-        <p class="status" id="status">Aguarde o sorteio...</p>
+        <p class="status" id="status">Aguarde sua missão...</p>
         <div class="pulse" id="pulse"></div>
       </div>
     </section>
@@ -53,6 +54,8 @@
       </article>
     </section>
   </main>
+
+  <div class="marca-erj" role="img" aria-label="ERJ · Explosão Radical Jovem"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="missoes.js"></script>
@@ -187,7 +190,20 @@
 
     function showWaiting() {
       trocarCena(cenas.espera);
-      statusEl.textContent = "Aguarde o sorteio...";
+      statusEl.textContent = "Aguarde sua missão...";
+    }
+
+    function dispararExplosao() {
+      const el = $("explosao");
+      el.classList.remove("ativa");
+      void el.offsetWidth;
+      el.classList.add("ativa");
+      if (!calmo) {
+        document.body.classList.remove("tremendo");
+        void document.body.offsetWidth;
+        document.body.classList.add("tremendo");
+      }
+      for (let i = 0; i < 40; i++) setTimeout(() => brasa(3.2), i * 16);
     }
 
     const supabaseClient = window.supabase.createClient(
@@ -199,21 +215,32 @@
       config: { presence: { key: myId } },
     });
 
+    // guarda o timeout pendente da revelação, pra poder cancelar num reset
+    let missaoTimeoutId = null;
+
     channel
       .on("broadcast", { event: "winner" }, ({ payload }) => {
         if (payload && payload.id === myId) {
+          if (missaoTimeoutId) clearTimeout(missaoTimeoutId);
+          dispararExplosao();
           trocarCena(cenas.chamado);
-          labareda();
-          setTimeout(revelarMissao, calmo ? 200 : 1800);
+          missaoTimeoutId = setTimeout(() => {
+            missaoTimeoutId = null;
+            revelarMissao();
+          }, calmo ? 200 : 1800);
         }
       })
       .on("broadcast", { event: "reset" }, () => {
+        if (missaoTimeoutId) {
+          clearTimeout(missaoTimeoutId);
+          missaoTimeoutId = null;
+        }
         showWaiting();
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           await channel.track({ id: myId });
-          statusEl.textContent = "Aguarde o sorteio...";
+          statusEl.textContent = "Aguarde sua missão...";
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           statusEl.textContent = "Erro de conexão. Recarregue a página.";
         }
