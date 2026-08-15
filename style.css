@@ -320,6 +320,13 @@ body.participante.tremendo {
 body.participante #cena-chamado .marca {
   animation: boom .55s cubic-bezier(.34, 1.56, .64, 1) both, respirar 3.4s ease-in-out .55s infinite;
 }
+body.participante.carregando #cena-chamado .marca {
+  animation: boom .35s cubic-bezier(.34, 1.56, .64, 1) both, carregar .8s ease-in both;
+}
+@keyframes carregar {
+  0%   { filter: drop-shadow(0 0 14px rgba(var(--acento-rgb), .55)); }
+  100% { filter: drop-shadow(0 0 50px rgba(var(--acento-rgb), 1)); }
+}
 @keyframes boom {
   0%   { transform: scale(0); opacity: 0; }
   60%  { transform: scale(1.35); opacity: 1; }

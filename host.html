@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sorteio ao vivo — Apresentador</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body class="host">
   <div class="marca-erj" role="img" aria-label="ERJ · Explosão Radical Jovem"></div>
@@ -25,7 +25,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
-  <script src="config.js"></script>
+  <script src="config.js?v=4"></script>
   <script>
     const params = new URLSearchParams(location.search);
     const room = params.get("room") || "sorteio-demo";

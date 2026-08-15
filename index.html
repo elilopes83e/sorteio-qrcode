@@ -12,7 +12,7 @@
     <link rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600&family=DM+Sans:wght@400;500&display=swap" />
   </noscript>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body class="participante">
   <div class="ceu" aria-hidden="true"></div>
@@ -59,8 +59,8 @@
   <div class="marca-erj" role="img" aria-label="ERJ · Explosão Radical Jovem"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="missoes.js"></script>
-  <script src="config.js"></script>
+  <script src="missoes.js?v=4"></script>
+  <script src="config.js?v=4"></script>
   <script>
     const params = new URLSearchParams(location.search);
     const room = params.get("room") || "sorteio-demo";
@@ -256,7 +256,7 @@
 
     function dispararParticulasGalaxia(xPct, yPct) {
       if (calmo) return;
-      criarParticulasGalaxia(xPct, yPct, 90);
+      criarParticulasGalaxia(xPct, yPct, 170);
       if (!particulasAnimando) {
         particulasAnimando = true;
         requestAnimationFrame(animarParticulasGalaxia);
@@ -292,23 +292,18 @@
       for (let i = 0; i < 40; i++) explosaoTimeoutIds.push(setTimeout(() => brasa(3.2), i * 16));
     }
 
-    // sequência de vários estouros, em pontos diferentes da tela, pra dar
-    // uma transição bem mais impactante antes de revelar a missão
+    // Big Bang: o núcleo (ícone) "carrega" energia por um instante, então
+    // estoura uma vez só no centro — flash + onda de choque + partículas —
+    // dando um tempo de contemplação antes da missão aparecer
     function dispararExplosao() {
       limparExplosaoPendente();
-      if (calmo) {
-        estourar(50, 45);
-        return;
-      }
-      const pontos = [
-        { x: 50, y: 45 },
-        { x: 26, y: 60 },
-        { x: 74, y: 36 },
-        { x: 50, y: 50 },
-      ];
-      pontos.forEach((p, i) => {
-        explosaoTimeoutIds.push(setTimeout(() => estourar(p.x, p.y), i * 420));
-      });
+      document.body.classList.add("carregando");
+      explosaoTimeoutIds.push(
+        setTimeout(() => {
+          document.body.classList.remove("carregando");
+          estourar(50, 45);
+        }, calmo ? 50 : 800)
+      );
     }
 
     const supabaseClient = window.supabase.createClient(
@@ -332,7 +327,7 @@
           missaoTimeoutId = setTimeout(() => {
             missaoTimeoutId = null;
             revelarMissao();
-          }, calmo ? 200 : 3400);
+          }, calmo ? 300 : 2500);
         }
       })
       .on("broadcast", { event: "reset" }, () => {
@@ -341,6 +336,7 @@
           missaoTimeoutId = null;
         }
         limparExplosaoPendente();
+        document.body.classList.remove("carregando");
         showWaiting();
       })
       .subscribe(async (status) => {
