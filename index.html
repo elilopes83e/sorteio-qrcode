@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Sorteio ao vivo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body id="body">
+  <h1 id="title">Você está conectado!</h1>
+  <p class="status" id="status">Aguarde o sorteio...</p>
+  <div class="pulse" id="pulse"></div>
+  <div class="winner-text" id="winner-text">🎉 Você ganhou! 🎉</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const room = params.get("room") || "sorteio-demo";
+
+    const STORAGE_KEY = "sorteio-my-id";
+    let myId = sessionStorage.getItem(STORAGE_KEY);
+    if (!myId) {
+      myId = crypto.randomUUID();
+      sessionStorage.setItem(STORAGE_KEY, myId);
+    }
+
+    const bodyEl = document.getElementById("body");
+    const titleEl = document.getElementById("title");
+    const statusEl = document.getElementById("status");
+    const pulseEl = document.getElementById("pulse");
+
+    const supabaseClient = window.supabase.createClient(
+      window.APP_CONFIG.SUPABASE_URL,
+      window.APP_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const channel = supabaseClient.channel("sorteio-" + room, {
+      config: { presence: { key: myId } },
+    });
+
+    function showWaiting() {
+      bodyEl.classList.remove("winner");
+      pulseEl.style.display = "block";
+      titleEl.textContent = "Você está conectado!";
+      statusEl.textContent = "Aguarde o sorteio...";
+    }
+
+    function showWinner() {
+      bodyEl.classList.add("winner");
+      pulseEl.style.display = "none";
+      titleEl.textContent = "🎉 VOCÊ FOI SORTEADO! 🎉";
+      statusEl.textContent = "";
+      if (window.confetti) {
+        const duration = 3000;
+        const end = Date.now() + duration;
+        (function frame() {
+          confetti({ particleCount: 5, angle: 60, spread: 70, origin: { x: 0 } });
+          confetti({ particleCount: 5, angle: 120, spread: 70, origin: { x: 1 } });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+      }
+    }
+
+    channel
+      .on("broadcast", { event: "winner" }, ({ payload }) => {
+        if (payload && payload.id === myId) {
+          showWinner();
+        }
+      })
+      .on("broadcast", { event: "reset" }, () => {
+        showWaiting();
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ id: myId });
+          statusEl.textContent = "Aguarde o sorteio...";
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          statusEl.textContent = "Erro de conexão. Recarregue a página.";
+        }
+      });
+  </script>
+</body>
+</html>

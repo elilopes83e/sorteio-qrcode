@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sorteio ao vivo — Apresentador</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="host">
+  <h1>Escaneie para participar</h1>
+  <div id="qrcode"></div>
+  <p class="room-label" id="room-label"></p>
+
+  <p class="count" id="count">0</p>
+  <p class="count-label">pessoas conectadas</p>
+
+  <div class="actions">
+    <button class="draw" id="draw-btn" disabled>Sortear</button>
+    <button class="reset" id="reset-btn">Resetar</button>
+  </div>
+
+  <p class="winner-banner" id="winner-banner"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const room = params.get("room") || "sorteio-demo";
+    document.getElementById("room-label").textContent = "sala: " + room;
+
+    const participantUrl = new URL("index.html", location.href);
+    participantUrl.search = "?room=" + encodeURIComponent(room);
+
+    new QRCode(document.getElementById("qrcode"), {
+      text: participantUrl.toString(),
+      width: 260,
+      height: 260,
+    });
+
+    const countEl = document.getElementById("count");
+    const drawBtn = document.getElementById("draw-btn");
+    const resetBtn = document.getElementById("reset-btn");
+    const winnerBanner = document.getElementById("winner-banner");
+
+    const supabaseClient = window.supabase.createClient(
+      window.APP_CONFIG.SUPABASE_URL,
+      window.APP_CONFIG.SUPABASE_ANON_KEY
+    );
+
+    const HOST_KEY = "__host__";
+    const channel = supabaseClient.channel("sorteio-" + room, {
+      config: { presence: { key: HOST_KEY } },
+    });
+
+    function getParticipantIds() {
+      const state = channel.presenceState();
+      return Object.keys(state).filter((key) => key !== HOST_KEY);
+    }
+
+    function refreshCount() {
+      const ids = getParticipantIds();
+      countEl.textContent = ids.length;
+      drawBtn.disabled = ids.length === 0;
+    }
+
+    channel
+      .on("presence", { event: "sync" }, refreshCount)
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ id: HOST_KEY });
+          refreshCount();
+        }
+      });
+
+    drawBtn.addEventListener("click", async () => {
+      const ids = getParticipantIds();
+      if (ids.length === 0) return;
+      const winnerId = ids[Math.floor(Math.random() * ids.length)];
+      await channel.send({
+        type: "broadcast",
+        event: "winner",
+        payload: { id: winnerId },
+      });
+      winnerBanner.textContent = "Sorteado: " + winnerId.slice(0, 8) + "…";
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      await channel.send({ type: "broadcast", event: "reset", payload: {} });
+      winnerBanner.textContent = "";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #10131a;
+  color: #f4f4f6;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  transition: background-color 0.2s ease;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 8px;
+}
+
+p {
+  margin: 4px 0;
+  opacity: 0.85;
+}
+
+.status {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.pulse {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3ddc84;
+  margin: 16px auto 0;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* Estado de vencedor no celular do participante */
+body.winner {
+  background: #d81c1c;
+}
+
+body.winner .winner-text {
+  display: block;
+}
+
+.winner-text {
+  display: none;
+  font-size: 2.4rem;
+  font-weight: 800;
+  margin-top: 12px;
+}
+
+/* Host / apresentador */
+.host {
+  gap: 20px;
+}
+
+.host #qrcode {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  line-height: 0;
+}
+
+.room-label {
+  font-family: monospace;
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.count {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.count-label {
+  opacity: 0.7;
+  margin-top: -8px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+button {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+button.draw {
+  background: #3ddc84;
+  color: #0a1a10;
+}
+
+button.reset {
+  background: #2a2f3a;
+  color: #f4f4f6;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.winner-banner {
+  min-height: 1.4em;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ff6b6b;
+}
