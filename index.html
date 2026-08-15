@@ -4,16 +4,58 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Sorteio ao vivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+        href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600&family=DM+Sans:wght@400;500&display=swap" />
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600&family=DM+Sans:wght@400;500&display=swap" />
+  </noscript>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body id="body">
-  <h1 id="title">Você está conectado!</h1>
-  <p class="status" id="status">Aguarde o sorteio...</p>
-  <div class="pulse" id="pulse"></div>
-  <div class="winner-text" id="winner-text">🎉 Você ganhou! 🎉</div>
+<body class="participante">
+  <div class="ceu" aria-hidden="true"></div>
+
+  <main class="palco">
+    <!-- CENA 1: aguardando -->
+    <section class="cena ativa" id="cena-espera">
+      <div class="abertura">
+        <div class="etiqueta">Sorteio ao vivo</div>
+        <h1 id="title">Você está conectado!</h1>
+        <p class="status" id="status">Aguarde o sorteio...</p>
+        <div class="pulse" id="pulse"></div>
+      </div>
+    </section>
+
+    <!-- CENA 2: chamado (transição breve antes da missão) -->
+    <section class="cena" id="cena-chamado">
+      <svg class="marca" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 1.5c.6 3.4-1.2 4.7-2.6 6.2C7.6 9.6 6 11.3 6 14.3 6 18.4 8.9 22.5 12 22.5s6-4.1 6-8.2c0-2.6-1.2-4.3-2.6-5.9-.5 1.3-1.3 2.1-2.2 2.5.7-2.6.2-6-1.2-9.4z" />
+      </svg>
+      <p class="chamada">🎉 Você foi sorteado! 🎉</p>
+    </section>
+
+    <!-- CENA 3: missão revelada -->
+    <section class="cena" id="cena-missao">
+      <article class="cartao escalonado" aria-live="polite">
+        <div class="selo">
+          <i class="ponto" aria-hidden="true"></i>
+          <span class="etiqueta">Sua missão</span>
+        </div>
+        <h2 class="nome" id="nome"></h2>
+        <p class="quem" id="quem"></p>
+        <p class="tarefa" id="tarefa"></p>
+        <blockquote class="palavra">
+          <q id="palavra"></q>
+          <cite id="referencia"></cite>
+        </blockquote>
+      </article>
+    </section>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="missoes.js"></script>
   <script src="config.js"></script>
   <script>
     const params = new URLSearchParams(location.search);
@@ -26,10 +68,127 @@
       sessionStorage.setItem(STORAGE_KEY, myId);
     }
 
-    const bodyEl = document.getElementById("body");
-    const titleEl = document.getElementById("title");
     const statusEl = document.getElementById("status");
-    const pulseEl = document.getElementById("pulse");
+    const $ = (id) => document.getElementById(id);
+    const cenas = { espera: $("cena-espera"), chamado: $("cena-chamado"), missao: $("cena-missao") };
+    const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function trocarCena(destino) {
+      Object.values(cenas).forEach((c) => c.classList.remove("ativa"));
+      destino.classList.add("ativa");
+    }
+
+    // brasas — atmosfera de fundo, igual à erjmissao.html
+    const TETO_BRASAS = 24;
+    let relogioBrasas = null;
+    function brasa(vidaBase) {
+      if (calmo || document.hidden) return;
+      if (document.getElementsByClassName("brasa").length >= TETO_BRASAS) return;
+      const b = document.createElement("div");
+      b.className = "brasa";
+      const tam = 2 + Math.random() * 4;
+      b.style.left = Math.random() * 100 + "vw";
+      b.style.width = b.style.height = tam + "px";
+      b.style.opacity = 0.35 + Math.random() * 0.55;
+      b.style.setProperty("--desvio", Math.random() * 120 - 60 + "px");
+      const vida = vidaBase + Math.random() * 4;
+      b.style.animationDuration = vida + "s";
+      document.body.appendChild(b);
+      setTimeout(() => b.remove(), vida * 1000);
+    }
+    function iniciarBrasas() {
+      if (calmo || relogioBrasas) return;
+      relogioBrasas = setInterval(() => brasa(7), 620);
+    }
+    function pararBrasas() {
+      clearInterval(relogioBrasas);
+      relogioBrasas = null;
+    }
+    function labareda() {
+      for (let i = 0; i < 24; i++) setTimeout(() => brasa(3.4), i * 26);
+    }
+    if (!calmo) {
+      addEventListener("load", () => {
+        iniciarBrasas();
+        for (let i = 0; i < 6; i++) setTimeout(() => brasa(7), i * 260);
+      });
+      document.addEventListener("visibilitychange", () => {
+        document.hidden ? pararBrasas() : iniciarBrasas();
+      });
+    }
+
+    // sorteio de missão sem repetir enquanto houver missões novas nesta aba
+    let sacola = [];
+    let ultima = -1;
+    function proximoIndiceMissao() {
+      if (!sacola.length) {
+        sacola = missoes.map((_, i) => i);
+        for (let i = sacola.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [sacola[i], sacola[j]] = [sacola[j], sacola[i]];
+        }
+        if (sacola[sacola.length - 1] === ultima && sacola.length > 1) {
+          [sacola[sacola.length - 1], sacola[0]] = [sacola[0], sacola[sacola.length - 1]];
+        }
+      }
+      ultima = sacola.pop();
+      return ultima;
+    }
+
+    function girar(missao, aoTerminar) {
+      const alvo = $("nome");
+      if (calmo) {
+        alvo.textContent = missao.nome;
+        aoTerminar();
+        return;
+      }
+      let intervalo = 55, total = 0;
+      (function passo() {
+        alvo.textContent = missoes[Math.floor(Math.random() * missoes.length)].nome;
+        total += intervalo;
+        intervalo *= 1.19;
+        if (total < 1450) {
+          setTimeout(passo, intervalo);
+        } else {
+          alvo.textContent = missao.nome;
+          alvo.classList.remove("brilho");
+          void alvo.offsetWidth;
+          alvo.classList.add("brilho");
+          aoTerminar();
+        }
+      })();
+    }
+
+    function revelarMissao() {
+      const missao = missoes[proximoIndiceMissao()];
+      const versiculo = versiculos[Math.floor(Math.random() * versiculos.length)];
+
+      const cartao = document.querySelector(".cartao");
+      $("quem").style.opacity = $("tarefa").style.opacity = "0";
+      document.querySelector(".palavra").style.opacity = "0";
+
+      trocarCena(cenas.missao);
+      cartao.classList.remove("escalonado");
+
+      girar(missao, () => {
+        labareda();
+        $("quem").textContent = missao.quem;
+        $("tarefa").textContent = missao.texto;
+        $("palavra").textContent = versiculo.texto;
+        $("referencia").textContent = versiculo.referencia;
+        [$("quem"), $("tarefa"), document.querySelector(".palavra")].forEach((el, i) => {
+          el.style.opacity = "";
+          el.style.animation = "none";
+          void el.offsetWidth;
+          el.style.animation = `subir-suave .55s cubic-bezier(.22,1,.36,1) ${i * 0.09}s both`;
+        });
+      });
+    }
+
+    function showWaiting() {
+      trocarCena(cenas.espera);
+      statusEl.textContent = "Aguarde o sorteio...";
+    }
 
     const supabaseClient = window.supabase.createClient(
       window.APP_CONFIG.SUPABASE_URL,
@@ -40,33 +199,12 @@
       config: { presence: { key: myId } },
     });
 
-    function showWaiting() {
-      bodyEl.classList.remove("winner");
-      pulseEl.style.display = "block";
-      titleEl.textContent = "Você está conectado!";
-      statusEl.textContent = "Aguarde o sorteio...";
-    }
-
-    function showWinner() {
-      bodyEl.classList.add("winner");
-      pulseEl.style.display = "none";
-      titleEl.textContent = "🎉 VOCÊ FOI SORTEADO! 🎉";
-      statusEl.textContent = "";
-      if (window.confetti) {
-        const duration = 3000;
-        const end = Date.now() + duration;
-        (function frame() {
-          confetti({ particleCount: 5, angle: 60, spread: 70, origin: { x: 0 } });
-          confetti({ particleCount: 5, angle: 120, spread: 70, origin: { x: 1 } });
-          if (Date.now() < end) requestAnimationFrame(frame);
-        })();
-      }
-    }
-
     channel
       .on("broadcast", { event: "winner" }, ({ payload }) => {
         if (payload && payload.id === myId) {
-          showWinner();
+          trocarCena(cenas.chamado);
+          labareda();
+          setTimeout(revelarMissao, calmo ? 200 : 1800);
         }
       })
       .on("broadcast", { event: "reset" }, () => {

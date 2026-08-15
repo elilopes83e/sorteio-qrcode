@@ -13,10 +13,11 @@
 
   <p class="count" id="count">0</p>
   <p class="count-label">pessoas conectadas</p>
+  <p class="eligible-note" id="eligible-note"></p>
 
   <div class="actions">
     <button class="draw" id="draw-btn" disabled>Sortear</button>
-    <button class="reset" id="reset-btn">Resetar</button>
+    <button class="reset" id="reset-btn">Reset Geral</button>
   </div>
 
   <p class="winner-banner" id="winner-banner"></p>
@@ -39,9 +40,14 @@
     });
 
     const countEl = document.getElementById("count");
+    const eligibleNoteEl = document.getElementById("eligible-note");
     const drawBtn = document.getElementById("draw-btn");
     const resetBtn = document.getElementById("reset-btn");
     const winnerBanner = document.getElementById("winner-banner");
+
+    // ids já sorteados nesta sessão do apresentador — não voltam a sair
+    // sorteados até um "Reset Geral"
+    const sorteados = new Set();
 
     const supabaseClient = window.supabase.createClient(
       window.APP_CONFIG.SUPABASE_URL,
@@ -58,10 +64,18 @@
       return Object.keys(state).filter((key) => key !== HOST_KEY);
     }
 
+    function getEligibleIds() {
+      return getParticipantIds().filter((id) => !sorteados.has(id));
+    }
+
     function refreshCount() {
       const ids = getParticipantIds();
+      const eligible = getEligibleIds();
       countEl.textContent = ids.length;
-      drawBtn.disabled = ids.length === 0;
+      eligibleNoteEl.textContent = sorteados.size
+        ? sorteados.size + " já sorteado(s) · " + eligible.length + " elegível(is)"
+        : "";
+      drawBtn.disabled = eligible.length === 0;
     }
 
     channel
@@ -74,20 +88,24 @@
       });
 
     drawBtn.addEventListener("click", async () => {
-      const ids = getParticipantIds();
-      if (ids.length === 0) return;
-      const winnerId = ids[Math.floor(Math.random() * ids.length)];
+      const eligible = getEligibleIds();
+      if (eligible.length === 0) return;
+      const winnerId = eligible[Math.floor(Math.random() * eligible.length)];
+      sorteados.add(winnerId);
       await channel.send({
         type: "broadcast",
         event: "winner",
         payload: { id: winnerId },
       });
       winnerBanner.textContent = "Sorteado: " + winnerId.slice(0, 8) + "…";
+      refreshCount();
     });
 
     resetBtn.addEventListener("click", async () => {
+      sorteados.clear();
       await channel.send({ type: "broadcast", event: "reset", payload: {} });
       winnerBanner.textContent = "";
+      refreshCount();
     });
   </script>
 </body>
