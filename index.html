@@ -97,7 +97,7 @@
       const vida = vidaBase + Math.random() * 4;
       b.style.animationDuration = vida + "s";
       document.body.appendChild(b);
-      setTimeout(() => b.remove(), vida * 1000);
+      setTimeout(() => b.remove(), vida * 5000);
     }
     function iniciarBrasas() {
       if (calmo || relogioBrasas) return;
@@ -193,8 +193,17 @@
       statusEl.textContent = "Aguarde sua missão...";
     }
 
-    function dispararExplosao() {
+    // timeouts da sequência de explosões, pra poder cancelar num reset
+    let explosaoTimeoutIds = [];
+    function limparExplosaoPendente() {
+      explosaoTimeoutIds.forEach(clearTimeout);
+      explosaoTimeoutIds = [];
+    }
+
+    function estourar(xPct, yPct) {
       const el = $("explosao");
+      el.style.setProperty("--ox", xPct + "%");
+      el.style.setProperty("--oy", yPct + "%");
       el.classList.remove("ativa");
       void el.offsetWidth;
       el.classList.add("ativa");
@@ -203,7 +212,26 @@
         void document.body.offsetWidth;
         document.body.classList.add("tremendo");
       }
-      for (let i = 0; i < 40; i++) setTimeout(() => brasa(3.2), i * 16);
+      for (let i = 0; i < 40; i++) explosaoTimeoutIds.push(setTimeout(() => brasa(3.2), i * 16));
+    }
+
+    // sequência de vários estouros, em pontos diferentes da tela, pra dar
+    // uma transição bem mais impactante antes de revelar a missão
+    function dispararExplosao() {
+      limparExplosaoPendente();
+      if (calmo) {
+        estourar(50, 45);
+        return;
+      }
+      const pontos = [
+        { x: 50, y: 45 },
+        { x: 26, y: 60 },
+        { x: 74, y: 36 },
+        { x: 50, y: 50 },
+      ];
+      pontos.forEach((p, i) => {
+        explosaoTimeoutIds.push(setTimeout(() => estourar(p.x, p.y), i * 420));
+      });
     }
 
     const supabaseClient = window.supabase.createClient(
@@ -227,7 +255,7 @@
           missaoTimeoutId = setTimeout(() => {
             missaoTimeoutId = null;
             revelarMissao();
-          }, calmo ? 200 : 1800);
+          }, calmo ? 200 : 3400);
         }
       })
       .on("broadcast", { event: "reset" }, () => {
@@ -235,6 +263,7 @@
           clearTimeout(missaoTimeoutId);
           missaoTimeoutId = null;
         }
+        limparExplosaoPendente();
         showWaiting();
       })
       .subscribe(async (status) => {

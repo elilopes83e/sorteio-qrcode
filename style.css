@@ -265,16 +265,36 @@ body.participante .explosao {
   z-index: 30;
   opacity: 0;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, .95), rgba(var(--acento-claro-rgb), .75) 22%, rgba(var(--acento-rgb), .35) 45%, transparent 72%);
+    radial-gradient(circle at var(--ox, 50%) var(--oy, 45%), rgba(255, 255, 255, .98), rgba(var(--acento-claro-rgb), .85) 20%, rgba(var(--acento-rgb), .45) 42%, transparent 70%);
 }
 body.participante .explosao.ativa {
-  animation: explodir .9s cubic-bezier(.16, 1, .3, 1) both;
+  animation: explodir 1s cubic-bezier(.16, 1, .3, 1) both;
 }
 @keyframes explodir {
   0%   { opacity: 0; transform: scale(.15); }
-  12%  { opacity: 1; transform: scale(.5); }
-  50%  { opacity: .6; transform: scale(1.7); }
-  100% { opacity: 0; transform: scale(2.8); }
+  10%  { opacity: 1; transform: scale(.55); }
+  45%  { opacity: .65; transform: scale(1.9); }
+  100% { opacity: 0; transform: scale(3.2); }
+}
+body.participante .explosao::after {
+  content: "";
+  position: absolute;
+  left: var(--ox, 50%);
+  top: var(--oy, 45%);
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, .9);
+  opacity: 0;
+}
+body.participante .explosao.ativa::after {
+  animation: onda 1s cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes onda {
+  0%   { opacity: .9; transform: scale(1); }
+  70%  { opacity: .22; }
+  100% { opacity: 0; transform: scale(14); }
 }
 
 body.participante.tremendo {
